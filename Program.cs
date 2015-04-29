@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Camurphy.CompletedTorrentOrganiser
@@ -18,13 +19,13 @@ namespace Camurphy.CompletedTorrentOrganiser
                 completedDownloadsDirectory += "\\";
             }
 
-            string[] paths = Directory.GetDirectories(completedDownloadsDirectory);
+            string[] directories = Directory.GetDirectories(completedDownloadsDirectory);
+            List<string> directoriesToDelete = new List<string>();
 
-            foreach (string path in paths)
+            foreach (string directory in directories)
             {
-                string directoryName = Path.GetFileName(path);
-
-                string[] files = Directory.GetFiles(path);
+                string directoryName = Path.GetFileName(directory);
+                string[] files = Directory.GetFiles(directory);
 
                 foreach (string file in files.Where(f => Settings.Default.SupportedFileExtensions.Contains(Path.GetExtension(f.ToLower()))))
                 {
@@ -33,7 +34,14 @@ namespace Camurphy.CompletedTorrentOrganiser
                     break;
                 }
 
-                Directory.Delete(path, true);
+                directoriesToDelete.Add(directory);
+            }
+
+            Thread.Sleep(5000); // Chill out before cleaning up directories
+            
+            foreach (string directory in directoriesToDelete)
+            {
+                Directory.Delete(directory, true);
             }
         }
     }
