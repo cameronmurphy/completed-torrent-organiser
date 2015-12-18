@@ -1,11 +1,8 @@
 ﻿using Camurphy.CompletedTorrentOrganiser.Properties;
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace Camurphy.CompletedTorrentOrganiser
 {
@@ -13,28 +10,33 @@ namespace Camurphy.CompletedTorrentOrganiser
     {
         static void Main(string[] args)
         {
-            string completedDownloadsDirectory = Settings.Default.CompletedDownloadsDirectory;
+            var completedDownloadsDirectory = Settings.Default.CompletedDownloadsDirectory;
 
             if (!completedDownloadsDirectory.EndsWith("\\")) {
                 completedDownloadsDirectory += "\\";
             }
 
-            string[] directories = Directory.GetDirectories(completedDownloadsDirectory);
-            List<string> directoriesToDelete = new List<string>();
+            var directories = Directory.GetDirectories(completedDownloadsDirectory);
+            var directoriesToDelete = new List<string>();
+            var supportedFileExtensions = Settings.Default.SupportedFileExtensions.Cast<string>();
 
             foreach (string directory in directories)
             {
-                string directoryName = Path.GetFileName(directory);
-                string[] files = Directory.GetFiles(directory);
+                var directoryInfo = new DirectoryInfo(directory);
+                var largestVideoFiles =
+                    (from file in directoryInfo.GetFiles()
+                     where supportedFileExtensions.Contains(file.Extension.ToLower())
+                     orderby file.Length descending
+                     select file);
 
-                foreach (string file in files.Where(f => Settings.Default.SupportedFileExtensions.Contains(Path.GetExtension(f.ToLower()))))
+                if (largestVideoFiles.Any())
                 {
-                    string destination = completedDownloadsDirectory + directoryName + Path.GetExtension(file.ToLower());
-                    File.Move(file, destination);
-                    break;
-                }
+                    var largestVideoFile = largestVideoFiles.First();
 
-                directoriesToDelete.Add(directory);
+                    string destination = completedDownloadsDirectory + directoryInfo.Name + largestVideoFile.Extension.ToLower();
+                    File.Move(largestVideoFile.FullName, destination);
+                    directoriesToDelete.Add(directoryInfo.FullName);
+                }
             }
 
             Thread.Sleep(5000); // Chill out before cleaning up directories
