@@ -18,14 +18,13 @@ namespace Camurphy.CompletedTorrentOrganiser
 
             var directories = Directory.GetDirectories(completedDownloadsDirectory);
             var directoriesToDelete = new List<string>();
-            var supportedFileExtensions = Settings.Default.SupportedFileExtensions.Cast<string>();
 
             foreach (string directory in directories)
             {
                 var directoryInfo = new DirectoryInfo(directory);
                 var largestVideoFiles =
                     (from file in directoryInfo.GetFiles()
-                     where supportedFileExtensions.Contains(file.Extension.ToLower())
+                     where Settings.Default.SupportedFileExtensions.Contains(file.Extension.ToLower())
                      orderby file.Length descending
                      select file);
 
