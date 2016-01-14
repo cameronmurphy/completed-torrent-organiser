@@ -17,32 +17,37 @@ namespace Camurphy.CompletedTorrentOrganiser
             }
 
             var directories = Directory.GetDirectories(completedDownloadsDirectory);
-            var directoriesToDelete = new List<string>();
 
             foreach (string directory in directories)
             {
                 var directoryInfo = new DirectoryInfo(directory);
-                var largestVideoFiles =
+                var videoFilesLargestToSmallest =
                     (from file in directoryInfo.GetFiles()
                      where Settings.Default.SupportedFileExtensions.Contains(file.Extension.ToLower())
                      orderby file.Length descending
                      select file);
 
-                if (largestVideoFiles.Any())
+                if (videoFilesLargestToSmallest.Any())
                 {
-                    var largestVideoFile = largestVideoFiles.First();
-
+                    var largestVideoFile = videoFilesLargestToSmallest.First();
                     string destination = completedDownloadsDirectory + directoryInfo.Name + largestVideoFile.Extension.ToLower();
-                    File.Move(largestVideoFile.FullName, destination);
-                    directoriesToDelete.Add(directoryInfo.FullName);
-                }
-            }
 
-            Thread.Sleep(5000); // Chill out before cleaning up directories
-            
-            foreach (string directory in directoriesToDelete)
-            {
-                Directory.Delete(directory, true);
+                    if (!File.Exists(destination))
+                    {
+                        File.Move(largestVideoFile.FullName, destination);
+                    }
+                    
+                    // Clean up other video files, just in case directory cleanup fails
+                    foreach (var videoFile in videoFilesLargestToSmallest)
+                    {
+                        if (videoFile != largestVideoFile)
+                        {
+                            File.Delete(videoFile.FullName);
+                        }
+                    }
+
+                    Directory.Delete(directoryInfo.FullName);
+                }
             }
         }
     }
