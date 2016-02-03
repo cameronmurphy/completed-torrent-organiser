@@ -1,4 +1,5 @@
 ﻿using Camurphy.CompletedTorrentOrganiser.Properties;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -46,8 +47,33 @@ namespace Camurphy.CompletedTorrentOrganiser
                         }
                     }
 
-                    Directory.Delete(directoryInfo.FullName);
+                    DeleteDirectory(directoryInfo.FullName);
                 }
+            }
+        }
+
+        /// <summary>
+        /// See http://stackoverflow.com/questions/329355/cannot-delete-directory-with-directory-deletepath-true#answer-1703799
+        /// </summary>
+        /// <param name="path"></param>
+        private static void DeleteDirectory(string path)
+        {
+            foreach (string directory in Directory.GetDirectories(path))
+            {
+                DeleteDirectory(directory);
+            }
+
+            try
+            {
+                Directory.Delete(path, true);
+            }
+            catch (IOException)
+            {
+                Directory.Delete(path, true);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                Directory.Delete(path, true);
             }
         }
     }
