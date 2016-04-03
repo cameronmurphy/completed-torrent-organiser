@@ -1,9 +1,7 @@
 ﻿using Camurphy.CompletedTorrentOrganiser.Properties;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading;
 
 namespace Camurphy.CompletedTorrentOrganiser
 {
@@ -22,33 +20,41 @@ namespace Camurphy.CompletedTorrentOrganiser
             foreach (string directory in directories)
             {
                 var directoryInfo = new DirectoryInfo(directory);
-                var videoFilesLargestToSmallest =
+                var videoFiles =
                     (from file in directoryInfo.GetFiles()
                      where Settings.Default.SupportedFileExtensions.Contains(file.Extension.ToLower())
-                     orderby file.Length descending
+                     && file.Length / 1024 / 1024 > Settings.Default.MinimumFileSizeMb
                      select file);
 
-                if (videoFilesLargestToSmallest.Any())
+                if (videoFiles.Count() == 1)
                 {
-                    var largestVideoFile = videoFilesLargestToSmallest.First();
-                    string destination = completedDownloadsDirectory + directoryInfo.Name + largestVideoFile.Extension.ToLower();
+                    var videoFile = videoFiles.First();
+                    string destination = completedDownloadsDirectory + directoryInfo.Name + videoFile.Extension.ToLower();
 
                     if (!File.Exists(destination))
                     {
-                        File.Move(largestVideoFile.FullName, destination);
-                    }
-                    
-                    // Clean up other video files, just in case directory cleanup fails
-                    foreach (var videoFile in videoFilesLargestToSmallest)
-                    {
-                        if (videoFile != largestVideoFile)
-                        {
-                            File.Delete(videoFile.FullName);
-                        }
+                        File.Move(videoFile.FullName, destination);
                     }
 
                     DeleteDirectory(directoryInfo.FullName);
                 }
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="path"></param>
+        private static void ResetFileAttributesRecursive(string path)
+        {
+            foreach (FileInfo file in new DirectoryInfo(path).GetFiles())
+            {
+                file.Attributes = FileAttributes.Normal;
+            }
+
+            foreach (string directory in Directory.GetDirectories(path))
+            {
+                ResetFileAttributesRecursive(directory);
             }
         }
 
@@ -58,6 +64,8 @@ namespace Camurphy.CompletedTorrentOrganiser
         /// <param name="path"></param>
         private static void DeleteDirectory(string path)
         {
+            ResetFileAttributesRecursive(path);
+
             foreach (string directory in Directory.GetDirectories(path))
             {
                 DeleteDirectory(directory);
@@ -69,11 +77,11 @@ namespace Camurphy.CompletedTorrentOrganiser
             }
             catch (IOException)
             {
-                Directory.Delete(path, true);
+                // Give up
             }
             catch (UnauthorizedAccessException)
             {
-                Directory.Delete(path, true);
+                // Give up
             }
         }
     }
