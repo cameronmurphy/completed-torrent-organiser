@@ -28,6 +28,8 @@ namespace Camurphy.CompletedTorrentOrganiser
 
                 if (videoFiles.Count() == 1)
                 {
+                    ResetFileAttributesRecursive(directory);
+
                     var videoFile = videoFiles.First();
                     string destination = completedDownloadsDirectory + directoryInfo.Name + videoFile.Extension.ToLower();
 
@@ -64,8 +66,6 @@ namespace Camurphy.CompletedTorrentOrganiser
         /// <param name="path"></param>
         private static void DeleteDirectory(string path)
         {
-            ResetFileAttributesRecursive(path);
-
             foreach (string directory in Directory.GetDirectories(path))
             {
                 DeleteDirectory(directory);
